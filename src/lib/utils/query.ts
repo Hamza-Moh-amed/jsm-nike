@@ -1,17 +1,58 @@
+import qs from "query-string";
+
 export type NormalizedProductFilters = {
-    search?: string;
-    genderSlugs: string[];
-    sizeSlugs: string[];
-    colorSlugs: string[];
-    brandSlugs: string[];
-    categorySlugs: string[];
-    priceMin?: number;
-    priceMax?: number;
-    priceRanges: Array<[number | undefined, number | undefined]>;
-    sort: "featured" | "newest" | "price_asc" | "price_desc";
-    page: number;
-    limit: number;
+  search?: string;
+  genderSlugs: string[];
+  sizeSlugs: string[];
+  colorSlugs: string[];
+  brandSlugs: string[];
+  categorySlugs: string[];
+  priceMin?: number;
+  priceMax?: number;
+  priceRanges: Array<[number | undefined, number | undefined]>;
+  sort: "featured" | "newest" | "price_asc" | "price_desc";
+  page: number;
+  limit: number;
 };
+
+type QueryValue = string | number | boolean | null | undefined | string[] | number[] | boolean[];
+type QueryObject = Record<string, QueryValue>;
+
+export function parseQuery(search: string): QueryObject {
+  const parsed = qs.parse(search, { arrayFormat: "bracket" });
+  return parsed as QueryObject;
+}
+
+export function stringifyQuery(query: QueryObject): string {
+  return qs.stringify(query, { skipNull: true, skipEmptyString: true, arrayFormat: "bracket" });
+}
+
+export function withUpdatedParams(pathname: string, currentSearch: string, updates: QueryObject): string {
+  const current = parseQuery(currentSearch);
+  const next: QueryObject = { ...current };
+
+  Object.entries(updates).forEach(([key, value]) => {
+    if (value === undefined || value === null || (Array.isArray(value) && value.length === 0)) {
+      delete next[key];
+    } else {
+      next[key] = value as QueryValue;
+    }
+  });
+
+  const search = stringifyQuery(next);
+  return search ? `${pathname}?${search}` : pathname;
+}
+
+export function setParam(
+  pathname: string,
+  currentSearch: string,
+  key: string,
+  value: string | number | null | undefined
+): string {
+  return withUpdatedParams(pathname, currentSearch, { [key]: value === null || value === undefined ? undefined : String(value) });
+}
+
+
 
 
 export function parseFilterParams(sp: Record<string, string | string[] | undefined>): NormalizedProductFilters {
