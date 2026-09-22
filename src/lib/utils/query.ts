@@ -43,6 +43,24 @@ export function withUpdatedParams(pathname: string, currentSearch: string, updat
   return search ? `${pathname}?${search}` : pathname;
 }
 
+export function toggleArrayParam(
+  pathname: string,
+  currentSearch: string,
+  key: string,
+  value: string
+): string {
+  const current = parseQuery(currentSearch);
+  const arr = new Set<string>(Array.isArray(current[key]) ? (current[key] as string[]) : current[key] ? [String(current[key])] : []);
+  if (arr.has(value)) {
+    arr.delete(value);
+  } else {
+    arr.add(value);
+  }
+  const nextValues = Array.from(arr);
+  const updates: QueryObject = { [key]: nextValues.length ? nextValues : undefined };
+  return withUpdatedParams(pathname, currentSearch, updates);
+}
+
 export function setParam(
   pathname: string,
   currentSearch: string,
@@ -52,7 +70,20 @@ export function setParam(
   return withUpdatedParams(pathname, currentSearch, { [key]: value === null || value === undefined ? undefined : String(value) });
 }
 
+export function removeParams(pathname: string, currentSearch: string, keys: string[]): string {
+  const current = parseQuery(currentSearch);
+  keys.forEach((k) => delete current[k]);
+  const search = stringifyQuery(current);
+  return search ? `${pathname}?${search}` : pathname;
+}
 
+export function getArrayParam(search: string, key: string): string[] {
+  const q = parseQuery(search)
+  const v = q[key]
+  if(Array.isArray(v)) return v.map(String);
+  if(v === undefined) return [];
+  return [String(v)];
+}
 
 
 export function parseFilterParams(sp: Record<string, string | string[] | undefined>): NormalizedProductFilters {

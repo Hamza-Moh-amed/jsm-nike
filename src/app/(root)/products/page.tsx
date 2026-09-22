@@ -1,5 +1,6 @@
 
 import ActiveBadges from '@/components/ActiveBadges'
+import Filters from '@/components/Filters'
 import ProductCard from '@/components/ProductCard'
 import Sort from '@/components/Sort'
 import { getAllProducts } from '@/lib/actions/products'
@@ -12,6 +13,7 @@ const ProductsPage = async ({searchParams}: {searchParams: Promise<Record<string
 
     const {products, totalCount} = await getAllProducts(parsed)
     console.log(products)
+  
 
   return (
     <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -21,7 +23,9 @@ const ProductsPage = async ({searchParams}: {searchParams: Promise<Record<string
       </header>
 
       <ActiveBadges sp={sp} />
-    <section>
+
+    <section className='grid grid-cols-1 gap-6 md:grid-cols-2'>
+      <Filters />
       <div>
         {products.length  === 0 ? (
           <div className='rounded-lg border border-light-300 p-8 text-center'>

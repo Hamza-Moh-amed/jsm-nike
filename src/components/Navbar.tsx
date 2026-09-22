@@ -22,7 +22,11 @@ export default function Navbar() {
         aria-label="Primary"
       >
         <Link href="/" aria-label="Nike Home" className="flex items-center">
-          <Image src="/logo.svg" alt="Nike" width={28} height={28} priority className="invert" />
+          <Image src="/logo.svg" alt="Nike" width={28} height={28} priority className="invert"
+          style={{
+              width: "28px",
+              height: "28px",
+            }} />
         </Link>
 
         <ul className="hidden items-center gap-8 md:flex">
