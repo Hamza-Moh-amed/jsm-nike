@@ -24,7 +24,7 @@ const ProductsPage = async ({searchParams}: {searchParams: Promise<Record<string
 
       <ActiveBadges sp={sp} />
 
-    <section className='grid grid-cols-1 gap-6 md:grid-cols-2'>
+    <section className='grid grid-cols-1 gap-6 md:grid-cols-[240px_1fr]'>
       <Filters />
       <div>
         {products.length  === 0 ? (
