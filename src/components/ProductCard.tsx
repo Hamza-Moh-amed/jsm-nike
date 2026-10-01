@@ -22,7 +22,7 @@ export interface ProductCardProps {
 
 const ProductCard = ({className,description,meta,  product: {id, name, imageUrl, minPrice, maxPrice, subtitle }}:  ProductCardProps) => {
     const price = 
-        minPrice !== null && maxPrice !== null && maxPrice !== maxPrice
+        minPrice !== null && maxPrice !== null && minPrice !== maxPrice
         ? `$${minPrice.toFixed(2)} - $${maxPrice.toFixed(2)}`
         : minPrice !== null 
         ? minPrice 
@@ -52,7 +52,7 @@ const ProductCard = ({className,description,meta,  product: {id, name, imageUrl,
             
       <div className='p-4'>
         <div className='mb-1 flex items-baseline justify-between gap-3'>
-            <h3 className='text-xl font-medium text-dark-900'>{name}</h3>
+            <h3 className='text-lg font-medium text-dark-900'>{name}</h3>
             {displayPrice && <span className='text-body-medium text-dark-900'>{displayPrice}</span>}
         </div>
         {description && <p className='text-body text-dark-700'>{description}</p>}

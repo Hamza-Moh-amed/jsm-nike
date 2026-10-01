@@ -2,10 +2,10 @@
 
 import { getArrayParam, removeParams, toggleArrayParam } from "@/lib/utils/query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import {  useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 const GENDERS = ["men", "women", "unisex"] as const 
-const SIZES = ["XS", "S", "M", "L", "XL"] as const;
+const SIZES = ["7", "8", "9", "10", "11", "12"] as const;
 const COLORS = ["black", "white", "red", "green", "blue", "grey"] as const;
 const PRICES = [
     { id: "0-50", label: "$0 - $50" },

@@ -13,6 +13,14 @@ import {
   products,
   sizes,
   colors,
+  SelectProduct,
+  SelectBrand,
+  SelectCategory,
+  SelectGender,
+  SelectVariant,
+  SelectColor,
+  SelectSize,
+  SelectProductImage,
 } from "@/lib/db/schema";
 
 import { NormalizedProductFilters } from "@/lib/utils/query";
@@ -163,7 +171,8 @@ export async function getAllProducts(filters: NormalizedProductFilters): Promise
       imageUrl: imageAgg,
     })
     .from(products)
-    .leftJoin(variantJoin, eq(variantJoin.productId, products.id))
+    // .leftJoin(variantJoin, eq(variantJoin.productId, products.id)) --> using leftJoin returns product variants whether a conditinon is true or not using an inner join solves the problem 
+    .innerJoin(variantJoin, eq(variantJoin.productId, products.id))
     .leftJoin(imagesJoin, eq(imagesJoin.productId, products.id))
     .leftJoin(genders, eq(genders.id, products.genderId))
     .leftJoin(brands, eq(brands.id, products.brandId))
@@ -172,13 +181,15 @@ export async function getAllProducts(filters: NormalizedProductFilters): Promise
     .groupBy(products.id, products.name, products.createdAt, genders.label)
     .orderBy(primaryOrder, desc(products.createdAt), asc(products.id))
     .limit(limit)
-    .offset(offset);
+    .offset(offset)
+
   const countRows = await db
     .select({
       cnt: count(sql<number>`distinct ${products.id}`),
     })
     .from(products)
-    .leftJoin(variantJoin, eq(variantJoin.productId, products.id))
+    // .leftJoin(variantJoin, eq(variantJoin.productId, products.id))
+    .innerJoin(variantJoin, eq(variantJoin.productId, products.id))
     .leftJoin(genders, eq(genders.id, products.genderId))
     .leftJoin(brands, eq(brands.id, products.brandId))
     .leftJoin(categories, eq(categories.id, products.categoryId))
@@ -197,4 +208,180 @@ export async function getAllProducts(filters: NormalizedProductFilters): Promise
   const totalCount = countRows[0]?.cnt ?? 0;
 
   return { products: productsOut, totalCount };
+}
+
+
+export type FullProduct = {
+  product: SelectProduct & {
+    brand?: SelectBrand | null;
+    category?: SelectCategory | null;
+    gender?: SelectGender | null;
+  };
+  variants: Array<
+    SelectVariant & {
+      color?: SelectColor | null;
+      size?: SelectSize | null;
+    }
+  >;
+  images: SelectProductImage[];
+};
+
+export async function getProduct(productId: string): Promise<FullProduct | null> {
+  
+  const rows = await db
+    .select({
+      productId: products.id,
+      productName: products.name,
+      productDescription: products.description,
+      productBrandId: products.brandId,
+      productCategoryId: products.categoryId,
+      productGenderId: products.genderId,
+      isPublished: products.isPublished,
+      defaultVariantId: products.defaultVariantId,
+      productCreatedAt: products.createdAt,
+      productUpdatedAt: products.updatedAt,
+
+      brandId: brands.id,
+      brandName: brands.name,
+      brandSlug: brands.slug,
+      brandLogoUrl: brands.logoUrl,
+
+      categoryId: categories.id,
+      categoryName: categories.name,
+      categorySlug: categories.slug,
+
+      genderId: genders.id,
+      genderLabel: genders.label,
+      genderSlug: genders.slug,
+
+      variantId: productVariants.id,
+      variantSku: productVariants.sku,
+      variantPrice: sql<number | null>`${productVariants.price}::numeric`,
+      variantSalePrice: sql<number | null>`${productVariants.salePrice}::numeric`,
+      variantColorId: productVariants.colorId,
+      variantSizeId: productVariants.sizeId,
+      variantInStock: productVariants.inStock,
+
+      colorId: colors.id,
+      colorName: colors.name,
+      colorSlug: colors.slug,
+      colorHex: colors.hexCode,
+
+      sizeId: sizes.id,
+      sizeName: sizes.name,
+      sizeSlug: sizes.slug,
+      sizeSortOrder: sizes.sortOrder,
+
+      imageId: productImages.id,
+      imageUrl: productImages.url,
+      imageIsPrimary: productImages.isPrimary,
+      imageSortOrder: productImages.sortOrder,
+      imageVariantId: productImages.variantId,
+    })
+    .from(products)
+    .leftJoin(brands, eq(brands.id, products.brandId))
+    .leftJoin(categories, eq(categories.id, products.categoryId))
+    .leftJoin(genders, eq(genders.id, products.genderId))
+    .leftJoin(productVariants, eq(productVariants.productId, products.id))
+    .leftJoin(colors, eq(colors.id, productVariants.colorId))
+    .leftJoin(sizes, eq(sizes.id, productVariants.sizeId))
+    .leftJoin(productImages, eq(productImages.productId, products.id))
+    .where(eq(products.id, productId));
+
+  if (!rows.length) return null;
+
+  const head = rows[0];
+
+  const product: SelectProduct & {
+    brand?: SelectBrand | null;
+    category?: SelectCategory | null;
+    gender?: SelectGender | null;
+  } = {
+    id: head.productId,
+    name: head.productName,
+    description: head.productDescription,
+    brandId: head.productBrandId ?? null,
+    categoryId: head.productCategoryId ?? null,
+    genderId: head.productGenderId ?? null,
+    isPublished: head.isPublished,
+    defaultVariantId: head.defaultVariantId ?? null,
+    createdAt: head.productCreatedAt,
+    updatedAt: head.productUpdatedAt,
+    brand: head.brandId
+      ? {
+          id: head.brandId,
+          name: head.brandName!,
+          slug: head.brandSlug!,
+          logoUrl: head.brandLogoUrl ?? null,
+        }
+      : null,
+    category: head.categoryId
+      ? {
+          id: head.categoryId,
+          name: head.categoryName!,
+          slug: head.categorySlug!,
+          parentId: null,
+        }
+      : null,
+    gender: head.genderId
+      ? {
+          id: head.genderId,
+          label: head.genderLabel!,
+          slug: head.genderSlug!,
+        }
+      : null,
+  };
+
+  const variantsMap = new Map<string, FullProduct["variants"][number]>();
+  const imagesMap = new Map<string, SelectProductImage>();
+
+  for (const r of rows) {
+    if (r.variantId && !variantsMap.has(r.variantId)) {
+      variantsMap.set(r.variantId, {
+        id: r.variantId,
+        productId: head.productId,
+        sku: r.variantSku!,
+        price: r.variantPrice !== null ? String(r.variantPrice) : "0",
+        salePrice: r.variantSalePrice !== null ? String(r.variantSalePrice) : null,
+        colorId: r.variantColorId!,
+        sizeId: r.variantSizeId!,
+        inStock: r.variantInStock!,
+        weight: null,
+        dimensions: null,
+        createdAt: head.productCreatedAt,
+        color: r.colorId
+          ? {
+              id: r.colorId,
+              name: r.colorName!,
+              slug: r.colorSlug!,
+              hexCode: r.colorHex!,
+            }
+          : null,
+        size: r.sizeId
+          ? {
+              id: r.sizeId,
+              name: r.sizeName!,
+              slug: r.sizeSlug!,
+              sortOrder: r.sizeSortOrder!,
+            }
+          : null,
+      });
+    }
+    if (r.imageId && !imagesMap.has(r.imageId)) {
+      imagesMap.set(r.imageId, {
+        id: r.imageId,
+        productId: head.productId,
+        variantId: r.imageVariantId ?? null,
+        url: r.imageUrl!,
+        sortOrder: r.imageSortOrder ?? 0,
+        isPrimary: r.imageIsPrimary ?? false,
+      });
+    }
+  }
+
+  return {
+    product,
+    variants: Array.from(variantsMap.values()),
+    images: Array.from(imagesMap.values()),
+  };
 }

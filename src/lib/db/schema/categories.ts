@@ -26,7 +26,7 @@ export const categoriesRelations = relations(categories, ({ many, one }) => ({
 export const insertCategorySchema = z.object({
   name: z.string().min(1),
   slug: z.string().min(1),
-  parentId: z.string().uuid().optional().nullable(),
+  parentId: z.uuid().optional().nullable(),
 });
 export const selectCategorySchema = insertCategorySchema.extend({
   id: z.string().uuid(),
